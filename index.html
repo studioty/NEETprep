@@ -11,58 +11,72 @@
 body {
   margin: 0;
   font-family: 'Segoe UI', sans-serif;
-  background: #0f172a;
+  background: linear-gradient(135deg, #0f172a, #020617);
   color: white;
 }
 
-/* LANDING SCREEN */
+/* LANDING */
 #landing {
   height: 100vh;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  text-align: center;
 }
 
-h1 {
+.title {
   font-size: 60px;
-  margin: 0;
+  font-weight: bold;
 }
 
 .tagline {
   color: #94a3b8;
-  margin: 10px 0 30px;
+  margin-bottom: 30px;
 }
 
-.upload-box {
+.upload {
   border: 2px dashed #38bdf8;
   padding: 30px;
-  border-radius: 15px;
+  border-radius: 20px;
   cursor: pointer;
-  transition: 0.3s;
+  backdrop-filter: blur(10px);
 }
 
-.upload-box:hover {
-  background: rgba(56,189,248,0.1);
-}
+input { display: none; }
 
-input {
-  display: none;
-}
-
-/* FLASHCARD SCREEN */
+/* APP */
 #app {
   display: none;
+  height: 100vh;
+  display: flex;
+}
+
+/* LEFT PDF */
+#pdfContainer {
+  width: 50%;
+  background: #020617;
+  overflow: auto;
+  padding: 10px;
+}
+
+canvas {
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+/* RIGHT FLASHCARDS */
+#flashcards {
+  width: 50%;
   padding: 20px;
+  overflow-y: auto;
 }
 
 .card {
-  background: #1e293b;
+  background: rgba(30,41,59,0.7);
   padding: 20px;
-  margin: 15px auto;
-  max-width: 700px;
-  border-radius: 12px;
+  margin-bottom: 15px;
+  border-radius: 15px;
+  backdrop-filter: blur(10px);
   cursor: pointer;
 }
 
@@ -72,8 +86,10 @@ input {
   color: #38bdf8;
 }
 
-.back-btn {
-  margin-bottom: 20px;
+.back {
+  position: absolute;
+  top: 20px;
+  left: 20px;
   cursor: pointer;
   color: #38bdf8;
 }
@@ -84,32 +100,34 @@ input {
 
 <!-- LANDING -->
 <div id="landing">
-  <h1>NEETprep</h1>
-  <p class="tagline">Helps you prep easily for NEET 📚</p>
+  <div class="title">NEETprep</div>
+  <div class="tagline">Prep smarter, not harder 📚</div>
 
-  <label class="upload-box">
-    📄 Upload PDF
+  <label class="upload">
+    Upload PDF
     <input type="file" id="pdfInput" accept="application/pdf">
   </label>
 </div>
 
-<!-- FLASHCARD APP -->
+<!-- APP -->
 <div id="app">
-  <div class="back-btn" onclick="goBack()">← Back</div>
-  <h2>Flashcards</h2>
-  <div id="cards"></div>
+  <div class="back" onclick="goBack()">← Back</div>
+
+  <div id="pdfContainer"></div>
+  <div id="flashcards"></div>
 </div>
 
 <script>
 const input = document.getElementById("pdfInput");
-const cardsDiv = document.getElementById("cards");
+const pdfContainer = document.getElementById("pdfContainer");
+const flashcardsDiv = document.getElementById("flashcards");
 
 input.addEventListener("change", async function(e) {
   const file = e.target.files[0];
   if (!file) return;
 
   document.getElementById("landing").style.display = "none";
-  document.getElementById("app").style.display = "block";
+  document.getElementById("app").style.display = "flex";
 
   const reader = new FileReader();
 
@@ -117,47 +135,83 @@ input.addEventListener("change", async function(e) {
     const typedarray = new Uint8Array(this.result);
     const pdf = await pdfjsLib.getDocument(typedarray).promise;
 
-    let fullText = "";
+    pdfContainer.innerHTML = "";
 
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
+
+      const viewport = page.getViewport({ scale: 1.2 });
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d");
+
+      canvas.height = viewport.height;
+      canvas.width = viewport.width;
+
+      await page.render({ canvasContext: context, viewport: viewport }).promise;
+      pdfContainer.appendChild(canvas);
+
       const content = await page.getTextContent();
       const text = content.items.map(item => item.str).join(" ");
-      fullText += text + " ";
-    }
 
-    generateFlashcards(fullText);
+      createSmartCards(text);
+    }
   };
 
   reader.readAsArrayBuffer(file);
 });
 
-function generateFlashcards(text) {
-  cardsDiv.innerHTML = "";
+/* SMART FLASHCARDS */
+function createSmartCards(text) {
   const sentences = text.split(". ");
 
-  sentences.slice(0, 25).forEach(sentence => {
-    const card = document.createElement("div");
-    card.className = "card";
+  sentences.slice(0, 10).forEach(sentence => {
 
-    card.innerHTML = `
-      <strong>${sentence}</strong>
-      <div class="answer">${sentence}</div>
-    `;
+    // Cloze deletion (Anki style)
+    let words = sentence.split(" ");
+    if (words.length > 6) {
+      let index = Math.floor(words.length / 2);
+      let hidden = words[index];
+      words[index] = "______";
 
-    card.addEventListener("click", () => {
-      const ans = card.querySelector(".answer");
-      ans.style.display = ans.style.display === "none" ? "block" : "none";
-    });
+      let question = words.join(" ");
+      let answer = hidden;
 
-    cardsDiv.appendChild(card);
+      addCard(question, answer);
+    }
+
+    // Definition style
+    if (sentence.includes(" is ") || sentence.includes(" are ")) {
+      let parts = sentence.split(" is ");
+      if (parts.length > 1) {
+        addCard("What is " + parts[0] + "?", parts[1]);
+      }
+    }
+
   });
+}
+
+function addCard(q, a) {
+  const card = document.createElement("div");
+  card.className = "card";
+
+  card.innerHTML = `
+    <strong>${q}</strong>
+    <div class="answer">${a}</div>
+  `;
+
+  card.addEventListener("click", () => {
+    const ans = card.querySelector(".answer");
+    ans.style.display = ans.style.display === "none" ? "block" : "none";
+  });
+
+  flashcardsDiv.appendChild(card);
 }
 
 function goBack() {
   document.getElementById("landing").style.display = "flex";
   document.getElementById("app").style.display = "none";
-  cardsDiv.innerHTML = "";
+  pdfContainer.innerHTML = "";
+  flashcardsDiv.innerHTML = "";
 }
 </script>
 
