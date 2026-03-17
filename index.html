@@ -1,47 +1,104 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>NEET Flashcard Generator</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+<meta charset="UTF-8">
+<title>NEETprep</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <style>
-    body {
-      font-family: Arial;
-      background: #0f172a;
-      color: white;
-      text-align: center;
-      padding: 20px;
-    }
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 
-    input {
-      margin: 20px;
-    }
+<style>
+body {
+  margin: 0;
+  font-family: 'Segoe UI', sans-serif;
+  background: #0f172a;
+  color: white;
+}
 
-    .card {
-      background: #1e293b;
-      padding: 20px;
-      margin: 10px auto;
-      width: 80%;
-      border-radius: 10px;
-      cursor: pointer;
-    }
+/* LANDING SCREEN */
+#landing {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
 
-    .answer {
-      display: none;
-      color: #38bdf8;
-      margin-top: 10px;
-    }
-  </style>
+h1 {
+  font-size: 60px;
+  margin: 0;
+}
+
+.tagline {
+  color: #94a3b8;
+  margin: 10px 0 30px;
+}
+
+.upload-box {
+  border: 2px dashed #38bdf8;
+  padding: 30px;
+  border-radius: 15px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.upload-box:hover {
+  background: rgba(56,189,248,0.1);
+}
+
+input {
+  display: none;
+}
+
+/* FLASHCARD SCREEN */
+#app {
+  display: none;
+  padding: 20px;
+}
+
+.card {
+  background: #1e293b;
+  padding: 20px;
+  margin: 15px auto;
+  max-width: 700px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.answer {
+  display: none;
+  margin-top: 10px;
+  color: #38bdf8;
+}
+
+.back-btn {
+  margin-bottom: 20px;
+  cursor: pointer;
+  color: #38bdf8;
+}
+</style>
 </head>
 
 <body>
 
-<h1>📚 NEET Flashcard Generator</h1>
+<!-- LANDING -->
+<div id="landing">
+  <h1>NEETprep</h1>
+  <p class="tagline">Helps you prep easily for NEET 📚</p>
 
-<input type="file" id="pdfInput" accept="application/pdf">
+  <label class="upload-box">
+    📄 Upload PDF
+    <input type="file" id="pdfInput" accept="application/pdf">
+  </label>
+</div>
 
-<div id="cards"></div>
+<!-- FLASHCARD APP -->
+<div id="app">
+  <div class="back-btn" onclick="goBack()">← Back</div>
+  <h2>Flashcards</h2>
+  <div id="cards"></div>
+</div>
 
 <script>
 const input = document.getElementById("pdfInput");
@@ -49,6 +106,11 @@ const cardsDiv = document.getElementById("cards");
 
 input.addEventListener("change", async function(e) {
   const file = e.target.files[0];
+  if (!file) return;
+
+  document.getElementById("landing").style.display = "none";
+  document.getElementById("app").style.display = "block";
+
   const reader = new FileReader();
 
   reader.onload = async function() {
@@ -72,20 +134,15 @@ input.addEventListener("change", async function(e) {
 
 function generateFlashcards(text) {
   cardsDiv.innerHTML = "";
-
-  // Simple splitting (you can improve this later)
   const sentences = text.split(". ");
 
-  sentences.slice(0, 20).forEach((sentence, index) => {
+  sentences.slice(0, 25).forEach(sentence => {
     const card = document.createElement("div");
     card.className = "card";
 
-    const question = "Explain: " + sentence;
-    const answer = sentence;
-
     card.innerHTML = `
-      <strong>${question}</strong>
-      <div class="answer">${answer}</div>
+      <strong>${sentence}</strong>
+      <div class="answer">${sentence}</div>
     `;
 
     card.addEventListener("click", () => {
@@ -95,6 +152,12 @@ function generateFlashcards(text) {
 
     cardsDiv.appendChild(card);
   });
+}
+
+function goBack() {
+  document.getElementById("landing").style.display = "flex";
+  document.getElementById("app").style.display = "none";
+  cardsDiv.innerHTML = "";
 }
 </script>
 
