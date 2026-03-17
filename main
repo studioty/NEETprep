@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>NEET Flashcard Generator</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+
+  <style>
+    body {
+      font-family: Arial;
+      background: #0f172a;
+      color: white;
+      text-align: center;
+      padding: 20px;
+    }
+
+    input {
+      margin: 20px;
+    }
+
+    .card {
+      background: #1e293b;
+      padding: 20px;
+      margin: 10px auto;
+      width: 80%;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    .answer {
+      display: none;
+      color: #38bdf8;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>📚 NEET Flashcard Generator</h1>
+
+<input type="file" id="pdfInput" accept="application/pdf">
+
+<div id="cards"></div>
+
+<script>
+const input = document.getElementById("pdfInput");
+const cardsDiv = document.getElementById("cards");
+
+input.addEventListener("change", async function(e) {
+  const file = e.target.files[0];
+  const reader = new FileReader();
+
+  reader.onload = async function() {
+    const typedarray = new Uint8Array(this.result);
+    const pdf = await pdfjsLib.getDocument(typedarray).promise;
+
+    let fullText = "";
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      const text = content.items.map(item => item.str).join(" ");
+      fullText += text + " ";
+    }
+
+    generateFlashcards(fullText);
+  };
+
+  reader.readAsArrayBuffer(file);
+});
+
+function generateFlashcards(text) {
+  cardsDiv.innerHTML = "";
+
+  // Simple splitting (you can improve this later)
+  const sentences = text.split(". ");
+
+  sentences.slice(0, 20).forEach((sentence, index) => {
+    const card = document.createElement("div");
+    card.className = "card";
+
+    const question = "Explain: " + sentence;
+    const answer = sentence;
+
+    card.innerHTML = `
+      <strong>${question}</strong>
+      <div class="answer">${answer}</div>
+    `;
+
+    card.addEventListener("click", () => {
+      const ans = card.querySelector(".answer");
+      ans.style.display = ans.style.display === "none" ? "block" : "none";
+    });
+
+    cardsDiv.appendChild(card);
+  });
+}
+</script>
+
+</body>
+</html>
